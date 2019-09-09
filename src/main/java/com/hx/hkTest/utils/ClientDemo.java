@@ -9,6 +9,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.concurrent.BasicThreadFactory;
 import org.slf4j.Logger;
 
+import java.io.File;
+import java.io.UnsupportedEncodingException;
 import java.time.LocalDateTime;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -19,9 +21,42 @@ public class ClientDemo {
     private static HCNetSDK hCNetSDK = null;
     private static boolean initSuc = false;
 
+    public static String DLL_PATH;
+    static {
+        String path = (ClientDemo.class.getResource("/").getPath()).replaceAll("%20", " ").substring(1).replace("/",
+                "\\");
+        try {
+            DLL_PATH = java.net.URLDecoder.decode(path, "utf-8");
+            System.out.println(DLL_PATH);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void main(String[] args){
+        if (Platform.isWindows()) {
+            System.out.println("准备加载HKNetSDK：");
+            hCNetSDK = (HCNetSDK) Native.loadLibrary(DLL_PATH  + File.separator + "HCNetSDK.dll", HCNetSDK.class);
+            System.out.println(DLL_PATH  + File.separator + "HCNetSDK.dll");
+        }
+        if (Platform.isLinux()) {
+            hCNetSDK =(HCNetSDK) Native.loadLibrary("hcnetsdk", HCNetSDK.class);
+        }
+        if (!initSuc) {
+            initSuc = hCNetSDK.NET_DVR_Init();
+//            hCNetSDK.NET_DVR_SetLogToFile(true, null, false);
+            if (!initSuc) {
+                log.error("初始化失败");
+            } else {
+                log.info("初始化成功");
+            }
+        }
+    }
     public ClientDemo() {
         if (Platform.isWindows()) {
-            hCNetSDK = (HCNetSDK) Native.loadLibrary("HCNetSDK", HCNetSDK.class);
+            System.out.println("准备加载HKNetSDK：");
+            hCNetSDK = (HCNetSDK) Native.loadLibrary(DLL_PATH  + File.separator + "HCNetSDK.dll", HCNetSDK.class);
+            System.out.println("加载成功！");
         }
         if (Platform.isLinux()) {
             hCNetSDK =(HCNetSDK) Native.loadLibrary("hcnetsdk", HCNetSDK.class);
@@ -130,7 +165,7 @@ public class ClientDemo {
         struStopTime.dwMinute = stopTime.getMinute();
         struStopTime.dwSecond = stopTime.getSecond();
 
-        String fileName = deviceIp + channel + struStartTime.toStringTitle()
+        String fileName = "D:\\DemoForMe\\hkTest\\mp4\\"+deviceIp + channel + struStartTime.toStringTitle()
                 + struStopTime.toStringTitle() + ".mp4";
         NativeLong loadHandle = hCNetSDK
                 .NET_DVR_GetFileByTime(lUserID, new NativeLong(channel), struStartTime, struStopTime, fileName);
